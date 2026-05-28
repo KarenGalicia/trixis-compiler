@@ -1,0 +1,80 @@
+/* ================================================
+   TRIXIS — ULTRAVIOLET CITY
+   Magenta · Violeta · Índigo · Negro profundo
+   τριξίς · Compilador Lingüístico EN ↔ ES
+   ================================================ */
+
+:root {
+  --bg-0:     #04000e;
+  --bg-1:     #070014;
+  --bg-2:     #0b001c;
+  --bg-3:     #100025;
+  --bg-4:     #160030;
+
+  --mag:      #ff00b4;
+  --vio:      #9632ff;
+  --ind:      #6400ff;
+  --white:    #ffe0ff;
+
+  --mag-soft: rgba(255,0,180,0.14);
+  --vio-soft: rgba(150,50,255,0.14);
+  --ind-soft: rgba(100,0,255,0.12);
+
+  --mag-glow: rgba(255,0,180,0.5);
+  --vio-glow: rgba(150,50,255,0.5);
+  --ind-glow: rgba(100,0,255,0.45);
+
+  --border-0: rgba(255,255,255,0.04);
+  --border-1: rgba(255,255,255,0.08);
+  --border-2: rgba(255,0,180,0.2);
+
+  --txt-1:    #ffe0ff;
+  --txt-2:    #c080d0;
+  --txt-3:    #603070;
+
+  --font:     'Inter', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+  --serif:    'Playfair Display', serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg-0);
+  color: var(--txt-1);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Barra superior animada */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--ind), var(--vio), var(--mag), var(--vio), var(--ind));
+  background-size: 200%;
+  animation: barSlide 3s linear infinite;
+  z-index: 9999;
+}
+@keyframes barSlide { 0%{background-position:0%} 100%{background-position:200%} }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: rgba(150,50,255,0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(150,50,255,0.6); }
+
+::selection { background: rgba(150,50,255,0.3); color: #fff; }
+
+button { font-family: var(--font); cursor: pointer; border: none; outline: none; transition: all 0.2s; }
+textarea, input { font-family: var(--font); outline: none; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+@keyframes pulsate { 0%{transform:scale(0.8);opacity:0.6} 100%{transform:scale(2);opacity:0} }
