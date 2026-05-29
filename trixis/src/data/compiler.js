@@ -14,11 +14,9 @@ export function runLexer(text, lang) {
     if (/^\d+$/.test(w)) { tokens.push({ id:idx+1, value:w, lower, pos:idx+1, cat:'Numeral Cardinal', type:'NUM', token:'NUM_CARD' }); return }
     if (dict[lower]) { tokens.push({ id:idx+1, value:w, lower, pos:idx+1, ...dict[lower] }); return }
 
-    // contracciones inglés
     if (lang==='en' && /n't$/i.test(w)) { tokens.push({ id:idx+1, value:w, lower, pos:idx+1, cat:'Contracción neg.', type:'VERB', token:'VERB', unknown:true }); return }
     if (lang==='en' && /'s$/i.test(w))  { tokens.push({ id:idx+1, value:w, lower, pos:idx+1, cat:'Contracción pos.', type:'DET',  token:'CONTR', unknown:true }); return }
 
-    // heurísticas morfológicas
     let gCat='Sustantivo', gType='NOUN', gToken='SUST'
     if (lang==='en') {
       if (/ly$/.test(lower))                         { gCat='Adv. Modo';    gType='ADV';  gToken='ADV_MODO' }
@@ -50,27 +48,24 @@ export function runParser(tokens, lang) {
 
   if (!wt.length) return { errors:[{ kind:'Sintáctico', pos:'-', word:'-', desc:'No hay palabras para analizar.' }], tree:null }
 
-  // Verificaciones sintácticas
   if (!wt.some(t => t.type === 'VERB'))
-    errors.push({ kind:'Sintáctico', pos:'-', word:'-', desc:'La oración no contiene ningún verbo. Se requiere al menos un verbo para una oración gramaticalmente completa.' })
+    errors.push({ kind:'Sintáctico', pos:'-', word:'-', desc:'La oración no contiene ningún verbo.' })
 
   for (let i=1; i<wt.length; i++)
     if (wt[i].type==='DET' && wt[i-1].type==='DET')
-      errors.push({ kind:'Sintáctico', pos:wt[i].pos, word:wt[i].value, desc:`Determinantes consecutivos: "${wt[i-1].value} ${wt[i].value}". Revisar estructura nominal.` })
+      errors.push({ kind:'Sintáctico', pos:wt[i].pos, word:wt[i].value, desc:`Determinantes consecutivos: "${wt[i-1].value} ${wt[i].value}".` })
 
-  // Verificaciones semánticas
   if (lang==='en' && wt.filter(t=>t.token==='ADV_NEG').length >= 2)
-    errors.push({ kind:'Semántico', pos:'-', word:'-', desc:'Doble negación detectada. En inglés estándar, produce afirmación.' })
+    errors.push({ kind:'Semántico', pos:'-', word:'-', desc:'Doble negación detectada.' })
 
   const last = tokens[tokens.length-1]
   if (last && last.type !== 'PUNCT')
-    errors.push({ kind:'Semántico', pos:last.pos, word:last.value, desc:'La oración no termina con signo de puntuación. Se recomienda finalizar con ".", "?" o "!".' })
+    errors.push({ kind:'Semántico', pos:last.pos, word:last.value, desc:'La oración no termina con signo de puntuación.' })
 
-  // Verificar concordancia verbal básica
   const hasSubj = wt.some(t => t.type==='PRON' || t.type==='NOUN')
   const hasVerb = wt.some(t => t.type==='VERB')
   if (hasVerb && !hasSubj)
-    errors.push({ kind:'Semántico', pos:'-', word:'-', desc:'No se detectó sujeto explícito en la oración.' })
+    errors.push({ kind:'Semántico', pos:'-', word:'-', desc:'No se detectó sujeto explícito.' })
 
   return { errors, tree: buildTree(wt, lang) }
 }
@@ -83,7 +78,6 @@ export function buildTree(wt, lang) {
   const root = { label: isEN ? 'S' : 'O', type: 'root', children: [] }
   let i = 0
 
-  // Frase nominal
   const np = { label: isEN ? 'NP' : 'SN', type: 'np', children: [] }
   while (i < wt.length && ['DET','PRON','NUM','ADJ'].includes(wt[i].type)) {
     np.children.push({ label: wt[i].token, leaf: wt[i].value, type: wt[i].type }); i++
@@ -97,20 +91,62 @@ export function buildTree(wt, lang) {
   }
   if (np.children.length) root.children.push(np)
 
-  // Frase verbal
   const vp = { label: isEN ? 'VP' : 'SV', type: 'vp', children: [] }
   while (i < wt.length && !['PREP','CONJ'].includes(wt[i].type)) {
     vp.children.push({ label: wt[i].token, leaf: wt[i].value, type: wt[i].type }); i++
   }
   if (vp.children.length) root.children.push(vp)
 
-  // Frase preposicional
   if (i < wt.length) {
     const pp = { label: isEN ? 'PP' : 'SP', type: 'pp', children: [] }
     while (i < wt.length) {
       pp.children.push({ label: wt[i].token, leaf: wt[i].value, type: wt[i].type }); i++
     }
     if (pp.children.length) root.children.push(pp)
+  }
+
+  return root
+}
+
+/* ════════════════════════════════════════
+   ÁRBOL SEMÁNTICO ABSTRACTO (AST)
+════════════════════════════════════════ */
+export function buildAST(tokens) {
+  const wt = tokens.filter(t => !['DET','PUNCT','CONTR'].includes(t.type))
+  if (!wt.length) return null
+
+  const verbIdx = wt.findIndex(t => t.type === 'VERB')
+  if (verbIdx === -1) {
+    return { label: wt[0]?.value || '?', type: wt[0]?.type || 'NOUN', role: 'EXPR', val: wt[0]?.cat || '', children: [] }
+  }
+
+  const verb = wt[verbIdx]
+  const root = { label: verb.value.toUpperCase(), type: 'VERB', role: 'PREDICADO', val: verb.cat, children: [] }
+
+  const leftTokens = wt.slice(0, verbIdx)
+  if (leftTokens.length) {
+    if (leftTokens.length === 1) {
+      root.children.push({ label: leftTokens[0].value, type: leftTokens[0].type, role: 'SUJETO', val: leftTokens[0].cat, children: [] })
+    } else {
+      root.children.push({
+        label: 'SUJETO', type: 'NP', role: 'SUJETO',
+        val: leftTokens.map(t=>t.value).join(' '),
+        children: leftTokens.map(t => ({ label: t.value, type: t.type, role: t.type==='NOUN'?'NÚCLEO':'MOD', val: t.cat, children: [] }))
+      })
+    }
+  }
+
+  const rightTokens = wt.slice(verbIdx + 1)
+  if (rightTokens.length) {
+    if (rightTokens.length === 1) {
+      root.children.push({ label: rightTokens[0].value, type: rightTokens[0].type, role: 'OBJETO', val: rightTokens[0].cat, children: [] })
+    } else {
+      root.children.push({
+        label: 'OBJETO', type: 'NP', role: 'OBJETO',
+        val: rightTokens.map(t=>t.value).join(' '),
+        children: rightTokens.map(t => ({ label: t.value, type: t.type, role: t.type==='NOUN'?'NÚCLEO':'MOD', val: t.cat, children: [] }))
+      })
+    }
   }
 
   return root
@@ -124,13 +160,7 @@ export function buildSymTable(tokens) {
     .filter(t => t.type !== 'PUNCT')
     .reduce((acc, t) => {
       if (!acc.find(x => x.word === t.lower))
-        acc.push({
-          word: t.lower,
-          cat: t.cat,
-          type: t.type,
-          token: t.token,
-          freq: tokens.filter(x => x.lower === t.lower).length
-        })
+        acc.push({ word: t.lower, cat: t.cat, type: t.type, token: t.token, freq: tokens.filter(x => x.lower === t.lower).length })
       return acc
     }, [])
 }
@@ -140,10 +170,7 @@ export function buildSymTable(tokens) {
 ════════════════════════════════════════ */
 export function buildStats(tokens) {
   const types = ['NOUN','VERB','ADJ','ADV','DET','PRON','PREP','CONJ','NUM','INTERJ','PUNCT','CONTR']
-  return types.map(type => ({
-    type,
-    count: tokens.filter(t => t.type === type).length,
-  })).filter(s => s.count > 0)
+  return types.map(type => ({ type, count: tokens.filter(t => t.type === type).length })).filter(s => s.count > 0)
 }
 
 /* ════════════════════════════════════════
@@ -159,22 +186,19 @@ export const BNF_EN = `<S>       ::= <NP> <VP> <PUNCT>?  |  <INTERJ> <PUNCT>?
 <CONJ_COP>  ::= 'and' | 'e'                              (copulativas)
 <CONJ_ADV>  ::= 'but' | 'yet'                            (adversativas)
 <CONJ_DIS>  ::= 'or' | 'nor'                             (disyuntivas)
-<CONJ_DIST> ::= 'either...or' | 'neither...nor' | 'both...and' | 'whether...or'  (distributivas)
-<CONJ_EXPLIC>::= 'namely' | 'thus' | 'therefore' | 'hence'  (explicativas)
+<CONJ_DIST> ::= 'either...or' | 'neither...nor'          (distributivas)
+<CONJ_EXPLIC>::= 'namely' | 'thus' | 'therefore'         (explicativas)
 
 ── Conjunciones Subordinantes ──
 <CONJ_COND> ::= 'if' | 'unless'                          (condicionales)
 <CONJ_CAUS> ::= 'because' | 'since'                      (causales)
-<CONJ_CONSEC>::= 'so' | 'consequently' | 'however'       (consecutivas)
+<CONJ_CONSEC>::= 'so' | 'consequently'                   (consecutivas)
 <CONJ_CONCES>::= 'although' | 'even though'              (concesivas)
 <CONJ_COMP> ::= 'as' | 'than'                            (comparativas)
 <CONJ_FIN>  ::= 'so that' | 'in order to'               (finales)
 
 ✓  "The student reads a book."          →  NP VP PUNT
 ✓  "She can speak English well."        →  PRON MOD VERB NOUN ADV PUNT
-✓  "I love learning languages!"         →  PRON VERB VERB NOUN PUNT
-✓  "Both students study hard."          →  PRON_NUM NOUN VERB ADV PUNT
-✓  "I study because I want to learn."   →  NP VP CONJ_CAUS NP VP PUNT
 ✗  "The the student reads"              →  Error sint.: DET+DET consecutivos
 ✗  "She speaks"                         →  Error sem.: sin signo de puntuación
 ✗  "Reads books"                        →  Error sem.: sin sujeto explícito`
@@ -197,12 +221,10 @@ export const BNF_ES = `<O>       ::= <SN> <SV> <PUNT>?  |  <INTERJ> <PUNT>?
 <CONJ_CAUS> ::= 'porque' | 'pues' | 'ya que'           (causales)
 <CONJ_CONSEC>::= 'así que' | 'conque' | 'luego'        (consecutivas)
 <CONJ_CONCES>::= 'aunque' | 'si bien'                  (concesivas)
-<CONJ_COMP> ::= 'como' | 'más que' | 'menos que' | 'igual que' | 'tan'  (comparativas)
-<CONJ_FIN>  ::= 'para que' | 'a fin de' | 'con el fin' (finales)
+<CONJ_COMP> ::= 'como' | 'más que' | 'igual que'       (comparativas)
+<CONJ_FIN>  ::= 'para que' | 'a fin de'               (finales)
 
 ✓  "El estudiante lee un libro."        →  SN SV PUNT
 ✓  "Ella puede hablar español."         →  PRON MOD VERB SUST PUNT
-✓  "¡Me gusta aprender idiomas!"       →  SV PUNT
-✓  "Ambos estudian porque quieren."    →  PRON_NUM VERB CONJ_CAUS VERB PUNT
 ✗  "El el estudiante lee"              →  Error sint.: DET+DET consecutivos
 ✗  "Ella habla"                        →  Error sem.: sin signo de puntuación`

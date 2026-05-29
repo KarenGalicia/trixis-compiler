@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { runLexer, runParser, buildSymTable, buildStats, BNF_EN, BNF_ES } from './data/compiler.js'
+import { runLexer, runParser, buildSymTable, buildStats, buildAST, BNF_EN, BNF_ES } from './data/compiler.js'
 import Splash        from './components/Splash.jsx'
 import LandingPage   from './components/LandingPage.jsx'
 import Header        from './components/Header.jsx'
@@ -8,7 +8,6 @@ import PhaseBar      from './components/PhaseBar.jsx'
 import ResultTabs    from './components/ResultTabs.jsx'
 import StatsPanel    from './components/StatsPanel.jsx'
 import HistoryPanel  from './components/HistoryPanel.jsx'
-import PracticeMode  from './components/PracticeMode.jsx'
 
 export const TYPE_STYLE = {
   DET:    { bg:'rgba(150,50,255,0.12)',  tc:'#c080ff', bd:'rgba(150,50,255,0.4)'  },
@@ -25,9 +24,8 @@ export const TYPE_STYLE = {
   CONTR:  { bg:'rgba(180,80,255,0.10)',  tc:'#c060ff', bd:'rgba(180,80,255,0.35)' },
 }
 
-// Pantallas: splash → landing → app
 export default function App() {
-  const [screen,       setScreen]       = useState('splash') // splash | landing | app
+  const [screen,       setScreen]       = useState('splash')
   const [srcText,      setSrcText]      = useState('')
   const [outText,      setOutText]      = useState('')
   const [lang,         setLang]         = useState('en')
@@ -40,7 +38,6 @@ export default function App() {
   const [history,      setHistory]      = useState([])
   const [showHistory,  setShowHistory]  = useState(false)
   const [showStats,    setShowStats]    = useState(false)
-  const [showPractice, setShowPractice] = useState(false)
   const [liveMode,     setLiveMode]     = useState(false)
   const [speaking,     setSpeaking]     = useState(false)
   const [darkMode,     setDarkMode]     = useState(true)
@@ -69,7 +66,7 @@ export default function App() {
       setTimeout(() => {
         const { errors: synErr, tree } = runParser(tokens, lang)
         if (withPhases) setPhase(3)
-        setResult({ tokens, errors:[...lexErrors,...synErr], symTable:buildSymTable(tokens), tree, stats:buildStats(tokens) })
+        setResult({ tokens, errors:[...lexErrors,...synErr], symTable:buildSymTable(tokens), tree, ast:buildAST(tokens), stats:buildStats(tokens) })
         if (withPhases) { setAnalyzing(false); setPhase(4); setTab('anotado') }
       }, withPhases ? 350 : 0)
     }, withPhases ? 350 : 0)
@@ -94,7 +91,7 @@ export default function App() {
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-5',
           max_tokens: 1000,
           system: 'You are a professional translator. Respond ONLY with valid JSON: {"translation":"..."}. No markdown, no explanation.',
           messages: [{ role: 'user', content: `Translate from ${lang === 'en' ? 'English to Spanish' : 'Spanish to English'}: "${srcText}"` }]
@@ -110,7 +107,6 @@ export default function App() {
       const raw = data.content?.find(b => b.type === 'text')?.text || '{}'
       const { translation } = JSON.parse(raw.replace(/```json|```/g, '').trim())
       const tr = translation || 'Error en la traducción.'
-      // Typing animation
       setTypedText('')
       clearTimeout(typeTimer.current)
       let i = 0
@@ -140,8 +136,119 @@ export default function App() {
 
   const exportPDF = useCallback(() => {
     if (!result) return
-    const content = `TRIXIS — REPORTE\nτριξίς · Compilador Lingüístico EN ↔ ES · UMG 2026\n${'='.repeat(50)}\n\nTEXTO: ${srcText}\nTRADUCCIÓN: ${outText||'(sin traducción)'}\nIDIOMA: ${lang==='en'?'EN→ES':'ES→EN'}\n\nTOKENS:\n${result.tokens.map(t=>`  [${t.token}] "${t.value}" → ${t.cat}`).join('\n')}\n\nERRORES: ${result.errors.length===0?'Sin errores':result.errors.map(e=>`  [${e.kind}] "${e.word}": ${e.desc}`).join('\n')}\n\nGenerado por TRIXIS — ${new Date().toLocaleString('es-GT')}`
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content],{type:'text/plain'})); a.download='TRIXIS_Reporte.txt'; a.click()
+    import('jspdf').then(({ jsPDF }) => {
+      const doc = new jsPDF()
+
+      // Fondo oscuro
+      doc.setFillColor(4, 0, 14)
+      doc.rect(0, 0, 210, 297, 'F')
+
+      // Título
+      doc.setTextColor(192, 128, 255)
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.text('TRIXIS — REPORTE DE ANALISIS', 105, 20, { align: 'center' })
+
+      doc.setTextColor(150, 50, 255)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Compilador Linguistico EN <-> ES · UMG 2026', 105, 28, { align: 'center' })
+
+      // Línea
+      doc.setDrawColor(150, 50, 255)
+      doc.line(15, 33, 195, 33)
+
+      let y = 42
+
+      // Texto analizado
+      doc.setTextColor(255, 0, 180)
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('TEXTO:', 15, y)
+      doc.setTextColor(224, 192, 240)
+      doc.setFont('helvetica', 'normal')
+      const textoWrapped = doc.splitTextToSize(srcText, 160)
+      doc.text(textoWrapped, 40, y)
+      y += textoWrapped.length * 6 + 6
+
+      // Traducción
+      doc.setTextColor(255, 0, 180)
+      doc.setFont('helvetica', 'bold')
+      doc.text('TRADUCCION:', 15, y)
+      doc.setTextColor(224, 192, 240)
+      doc.setFont('helvetica', 'normal')
+      const tradWrapped = doc.splitTextToSize(outText || '(sin traduccion)', 150)
+      doc.text(tradWrapped, 52, y)
+      y += tradWrapped.length * 6 + 6
+
+      // Idioma
+      doc.setTextColor(255, 0, 180)
+      doc.setFont('helvetica', 'bold')
+      doc.text('IDIOMA:', 15, y)
+      doc.setTextColor(224, 192, 240)
+      doc.setFont('helvetica', 'normal')
+      doc.text(lang === 'en' ? 'EN -> ES' : 'ES -> EN', 40, y)
+      y += 10
+
+      // Línea
+      doc.setDrawColor(100, 0, 255)
+      doc.line(15, y, 195, y)
+      y += 8
+
+      // Tokens
+      doc.setTextColor(255, 0, 180)
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('TOKENS:', 15, y)
+      y += 7
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      result.tokens.forEach(t => {
+        if (y > 270) { doc.addPage(); doc.setFillColor(4,0,14); doc.rect(0,0,210,297,'F'); y = 20 }
+        doc.setTextColor(192, 128, 255)
+        doc.text(`[${t.token}]`, 20, y)
+        doc.setTextColor(224, 192, 240)
+        doc.text(`"${t.value}" → ${t.cat}`, 50, y)
+        y += 6
+      })
+
+      y += 4
+      // Línea
+      doc.setDrawColor(100, 0, 255)
+      doc.line(15, y, 195, y)
+      y += 8
+
+      // Errores
+      doc.setTextColor(255, 0, 180)
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ERRORES:', 15, y)
+      y += 7
+
+      if (result.errors.length === 0) {
+        doc.setTextColor(100, 0, 255)
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Sin errores detectados', 20, y)
+        y += 8
+      } else {
+        result.errors.forEach(e => {
+          if (y > 270) { doc.addPage(); doc.setFillColor(4,0,14); doc.rect(0,0,210,297,'F'); y = 20 }
+          doc.setTextColor(255, 150, 0)
+          doc.setFontSize(9)
+          doc.text(`[${e.kind}] "${e.word}": ${e.desc}`, 20, y)
+          y += 6
+        })
+      }
+
+      // Pie de página
+      doc.setTextColor(100, 0, 255)
+      doc.setFontSize(8)
+      doc.text(`Generado por TRIXIS — ${new Date().toLocaleString('es-GT')}`, 105, 290, { align: 'center' })
+
+      doc.save('TRIXIS_Reporte.pdf')
+    })
   }, [result, srcText, outText, lang])
 
   const flip = () => { setSrcText(outText); setOutText(''); setLang(l=>l==='en'?'es':'en'); setResult(null); setPhase(0) }
@@ -157,18 +264,16 @@ export default function App() {
   }
   const clear = () => { setSrcText(''); setOutText(''); setResult(null); setPhase(0) }
 
-  // ── PANTALLAS ──
   if (screen === 'splash')  return <Splash onEnter={() => setScreen('landing')} />
   if (screen === 'landing') return <LandingPage onEnterApp={() => setScreen('app')} />
 
   return (
     <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh', animation:'fadeIn 0.5s ease', background: darkMode ? undefined : 'linear-gradient(135deg,#f0e6ff,#e6d0ff)', color: darkMode ? undefined : '#1a0030' }}>
-      <Header lang={lang} onFlip={flip} liveMode={liveMode} onToggleLive={() => setLiveMode(l=>!l)} onHistory={() => setShowHistory(h=>!h)} onPractice={() => setShowPractice(p=>!p)} onLanding={() => setScreen('landing')} darkMode={darkMode} onToggleDark={() => setDarkMode(d=>!d)} />
+      <Header lang={lang} onFlip={flip} liveMode={liveMode} onToggleLive={() => setLiveMode(l=>!l)} onHistory={() => setShowHistory(h=>!h)} onLanding={() => setScreen('landing')} darkMode={darkMode} onToggleDark={() => setDarkMode(d=>!d)} />
 
       <main style={{ flex:1, padding:'1.25rem 1.5rem', maxWidth:1100, margin:'0 auto', width:'100%' }}>
         {showHistory  && <HistoryPanel history={history} onClose={()=>setShowHistory(false)} onLoad={item=>{setSrcText(item.src);setOutText(item.out);setShowHistory(false)}} />}
-        {showPractice && <PracticeMode lang={lang} onClose={()=>setShowPractice(false)} />}
-
+        
         <div style={{ background: darkMode ? 'rgba(11,0,28,0.9)' : 'rgba(255,255,255,0.85)', border:'1px solid rgba(150,50,255,0.22)', borderRadius:18, overflow:'hidden', boxShadow:'0 0 0 1px rgba(255,255,255,0.02), 0 8px 50px rgba(0,0,0,0.4)', position:'relative' }}>
           <div style={{ height:1, background:'linear-gradient(90deg,transparent,#ff00b4,#9632ff,#6400ff,transparent)', boxShadow:'0 0 12px rgba(150,50,255,0.5)' }}/>
           <TranslatorPanel srcText={srcText} setSrcText={setSrcText} outText={outText} typedText={typedText} lang={lang} onAll={doAll} onAnalyze={()=>doAnalyze(true)} onTranslate={doTranslate} onVoice={toggleVoice} listening={listening} onSpeak={speak} onStopSpeak={()=>{window.speechSynthesis.cancel();setSpeaking(false)}} speaking={speaking} onFile={handleFile} fileRef={fileRef} onClear={clear} onExport={exportPDF} analyzing={analyzing} translating={translating} liveMode={liveMode} darkMode={darkMode}/>

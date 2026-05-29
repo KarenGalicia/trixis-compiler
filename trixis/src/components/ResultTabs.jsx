@@ -2,6 +2,53 @@ import { TYPE_STYLE } from '../App.jsx'
 import BNFTree from './BNFTree.jsx'
 import { BNF_EN, BNF_ES } from '../data/compiler.js'
 
+const ROLE_COLORS = {
+  PREDICADO: '#00ffcc', SUJETO: '#ff00b4', OBJETO: '#9632ff',
+  NÚCLEO: '#ffc040', MOD: '#c080ff', EXPR: '#40e8ff',
+  VERB:'#00ffcc', NOUN:'#80b4ff', ADJ:'#ffc040', ADV:'#40ffe0',
+  PRON:'#ff60c0', NP:'#9632ff',
+}
+
+function ASTNode({ node, depth=0 }) {
+  if (!node) return null
+  const color = ROLE_COLORS[node.role] || ROLE_COLORS[node.type] || '#c080ff'
+
+  return (
+    <div style={{ marginLeft: depth * 32, marginBottom: 8 }}>
+      <div style={{ position:'relative', display:'inline-flex', flexDirection:'column', gap:2 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ padding:'6px 14px', borderRadius:10, background:`${color}18`, border:`1.5px solid ${color}60`, boxShadow:`0 0 12px ${color}20` }}>
+            <span style={{ fontFamily:'var(--mono)', fontWeight:700, fontSize:13, color }}>{node.label}</span>
+          </div>
+          <span style={{ fontSize:9, fontFamily:'var(--mono)', padding:'2px 7px', borderRadius:4, background:`${color}15`, border:`1px solid ${color}30`, color:`${color}cc`, letterSpacing:1 }}>
+            {node.role || node.type}
+          </span>
+          {node.val && (
+            <span style={{ fontSize:9, color:'rgba(150,50,255,0.5)', fontFamily:'var(--mono)', fontStyle:'italic' }}>
+              .val = "{node.val}"
+            </span>
+          )}
+        </div>
+        {node.children?.length > 0 && (
+          <div style={{ position:'relative', marginLeft:16, marginTop:4, borderLeft:'1px dashed rgba(150,50,255,0.2)', paddingLeft:16 }}>
+            {node.children.map((child, i) => (
+              <ASTNode key={i} node={child} depth={depth+1} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ASTView({ node }) {
+  return (
+    <div style={{ padding:'8px 0', position:'relative' }}>
+      <ASTNode node={node} depth={0} />
+    </div>
+  )
+}
+
 function Chip({ token, type }) {
   const s = TYPE_STYLE[type] || { bg:'#111', tc:'#777', bd:'#333' }
   return <span style={{ fontSize:10, padding:'2px 8px', borderRadius:5, background:s.bg, color:s.tc, border:`1px solid ${s.bd}`, fontFamily:'var(--mono)', fontWeight:700, letterSpacing:0.5 }}>{token}</span>
@@ -14,6 +61,7 @@ const TABS = [
   { id:'errores',   icon:'⚠', label:'Errores'        },
   { id:'grafica',   icon:'📈', label:'Gráfica'        },
   { id:'arbol',     icon:'⋔', label:'Árbol BNF'      },
+  { id:'ast',       icon:'🧠', label:'Árbol Semántico'},
   { id:'gramatica', icon:'{}', label:'Gramática BNF' },
 ]
 
@@ -30,10 +78,7 @@ const CAT_LABELS = {
 
 function CategoryChart({ tokens }) {
   const counts = {}
-  tokens.forEach(t => {
-    const k = t.type || 'Otro'
-    counts[k] = (counts[k] || 0) + 1
-  })
+  tokens.forEach(t => { const k = t.type || 'Otro'; counts[k] = (counts[k] || 0) + 1 })
   const total = tokens.length || 1
   const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1])
   const max = sorted[0]?.[1] || 1
@@ -205,7 +250,7 @@ export default function ResultTabs({ result, tab, setTab, lang, srcText, outText
           </div>
         )}
 
-        {/* GRÁFICA DE CATEGORÍAS */}
+        {/* GRÁFICA */}
         {tab==='grafica' && (
           <div style={{ padding:'4px 0' }}>
             <CategoryChart tokens={result.tokens} />
@@ -218,7 +263,23 @@ export default function ResultTabs({ result, tab, setTab, lang, srcText, outText
             <p style={{ fontSize:12, color:'rgba(96,48,112,1)', marginBottom:12, fontFamily:'var(--mono)' }}>Árbol de derivación sintáctica — interactivo</p>
             {result.tree
               ? <BNFTree tree={result.tree} lang={lang}/>
-              : <p style={{ fontSize:12, color:'#ff00b4', fontFamily:'var(--mono)' }}>No se pudo generar el árbol. Verifica que el texto tenga al menos un verbo.</p>
+              : <p style={{ fontSize:12, color:'#ff00b4', fontFamily:'var(--mono)' }}>No se pudo generar el árbol.</p>
+            }
+          </div>
+        )}
+
+        {/* ÁRBOL SEMÁNTICO */}
+        {tab==='ast' && (
+          <div>
+            <p style={{ fontSize:12, color:'rgba(96,48,112,1)', marginBottom:4, fontFamily:'var(--mono)' }}>
+              Árbol Semántico Abstracto (AST) — representa el significado, no la estructura
+            </p>
+            <p style={{ fontSize:10, color:'rgba(150,50,255,0.5)', marginBottom:16, fontFamily:'var(--mono)' }}>
+              El verbo es la raíz · los nodos muestran rol semántico (SUJETO, PREDICADO, OBJETO) · se omiten artículos y puntuación
+            </p>
+            {result.ast
+              ? <ASTView node={result.ast} />
+              : <p style={{ fontSize:12, color:'#ff00b4', fontFamily:'var(--mono)' }}>No se pudo generar el AST.</p>
             }
           </div>
         )}
@@ -243,4 +304,3 @@ export default function ResultTabs({ result, tab, setTab, lang, srcText, outText
     </div>
   )
 }
-

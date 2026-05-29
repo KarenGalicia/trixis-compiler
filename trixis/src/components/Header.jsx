@@ -1,4 +1,4 @@
-export default function Header({ lang, onFlip, liveMode, onToggleLive, onHistory, onPractice, onLanding, darkMode, onToggleDark }) {
+export default function Header({ lang, onFlip, liveMode, onToggleLive, onHistory, onLanding, darkMode, onToggleDark }) {
   const s = (c, g) => ({ color:c, boxShadow:`0 0 8px ${g}` })
   return (
     <header style={{ background:'rgba(7,0,20,0.96)', borderBottom:'1px solid rgba(150,50,255,0.18)', position:'relative', overflow:'hidden' }}>
@@ -56,7 +56,6 @@ export default function Header({ lang, onFlip, liveMode, onToggleLive, onHistory
           </button>
           <button onClick={onLanding} style={{ padding:'5px 11px', fontSize:10, borderRadius:7, border:'1px solid rgba(150,50,255,0.2)', background:'transparent', color:'rgba(150,50,255,0.4)', cursor:'pointer', fontFamily:'var(--mono)', fontWeight:700 }}>🏠 Empresa</button>
           <button onClick={onHistory} style={{ padding:'5px 11px', fontSize:10, borderRadius:7, border:'1px solid rgba(255,0,180,0.25)', background:'transparent', color:'rgba(255,0,180,0.5)', cursor:'pointer', fontFamily:'var(--mono)', fontWeight:700 }}>📋 Historial</button>
-          <button onClick={onPractice} style={{ padding:'5px 11px', fontSize:10, borderRadius:7, border:'1px solid rgba(100,0,255,0.25)', background:'transparent', color:'rgba(100,0,255,0.6)', cursor:'pointer', fontFamily:'var(--mono)', fontWeight:700 }}>🎯 Práctica</button>
         </div>
 
         {/* Lang switch */}
