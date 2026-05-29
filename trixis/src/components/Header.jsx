@@ -48,9 +48,6 @@ export default function Header({ lang, onFlip, onHistory, onLanding, darkMode, o
 
         {/* Extras toolbar */}
         <div style={{ display:'flex', gap:5, flexWrap:'wrap', alignItems:'center' }}>
-          <button onClick={onToggleLive} style={{ padding:'5px 11px', fontSize:10, borderRadius:7, border:`1px solid ${liveMode?'#9632ff':'rgba(150,50,255,0.25)'}`, background: liveMode?'rgba(150,50,255,0.18)':'transparent', color: liveMode?'#c080ff':'rgba(150,50,255,0.5)', cursor:'pointer', fontFamily:'var(--mono)', fontWeight:700, boxShadow: liveMode?'0 0 12px rgba(150,50,255,0.25)':'none' }}>
-            ⚡ {liveMode ? 'LIVE ON' : 'LIVE'}
-          </button>
           <button onClick={onToggleDark} title={darkMode?'Modo claro':'Modo oscuro'} style={{ padding:'5px 11px', fontSize:10, borderRadius:7, border:'1px solid rgba(150,50,255,0.2)', background:'transparent', color:'rgba(192,128,208,0.6)', cursor:'pointer', fontFamily:'var(--mono)', fontWeight:700 }}>
             {darkMode ? '☀️' : '🌙'}
           </button>

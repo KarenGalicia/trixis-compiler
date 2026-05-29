@@ -180,7 +180,7 @@ export default function LandingPage({ onEnterApp }) {
                   {/* Foto o avatar */}
                   <div style={{ height:220, background:`linear-gradient(180deg,${m.color}20,rgba(0,0,10,0.9))`, position:'relative', overflow:'hidden' }}>
                     {m.photo ? (
-                      <img src={m.photo} alt={m.name} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center center' }}/>
+<img src={m.photo} alt={m.name} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 35%' }}/>
                     ) : (
                       <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:10 }}>
                         {/* Avatar placeholder elegante */}
