@@ -38,22 +38,13 @@ export default function App() {
   const [history,      setHistory]      = useState([])
   const [showHistory,  setShowHistory]  = useState(false)
   const [showStats,    setShowStats]    = useState(false)
-  const [liveMode,     setLiveMode]     = useState(false)
   const [speaking,     setSpeaking]     = useState(false)
   const [darkMode,     setDarkMode]     = useState(true)
   const [typedText,    setTypedText]    = useState('')
   const [showChart,    setShowChart]    = useState(false)
   const fileRef    = useRef(null)
   const recRef     = useRef(null)
-  const liveTimer  = useRef(null)
   const typeTimer  = useRef(null)
-
-  useEffect(() => {
-    if (!liveMode || !srcText.trim()) return
-    clearTimeout(liveTimer.current)
-    liveTimer.current = setTimeout(() => doAnalyze(false), 800)
-    return () => clearTimeout(liveTimer.current)
-  }, [srcText, lang, liveMode])
 
   const doAnalyze = useCallback((withPhases = true) => {
     if (!srcText.trim()) return
@@ -269,14 +260,14 @@ export default function App() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh', animation:'fadeIn 0.5s ease', background: darkMode ? undefined : 'linear-gradient(135deg,#f0e6ff,#e6d0ff)', color: darkMode ? undefined : '#1a0030' }}>
-      <Header lang={lang} onFlip={flip} liveMode={liveMode} onToggleLive={() => setLiveMode(l=>!l)} onHistory={() => setShowHistory(h=>!h)} onLanding={() => setScreen('landing')} darkMode={darkMode} onToggleDark={() => setDarkMode(d=>!d)} />
+      <Header lang={lang} onFlip={flip} onHistory={() => setShowHistory(h=>!h)} onLanding={() => setScreen('landing')} darkMode={darkMode} onToggleDark={() => setDarkMode(d=>!d)} />
 
       <main style={{ flex:1, padding:'1.25rem 1.5rem', maxWidth:1100, margin:'0 auto', width:'100%' }}>
         {showHistory  && <HistoryPanel history={history} onClose={()=>setShowHistory(false)} onLoad={item=>{setSrcText(item.src);setOutText(item.out);setShowHistory(false)}} />}
         
         <div style={{ background: darkMode ? 'rgba(11,0,28,0.9)' : 'rgba(255,255,255,0.85)', border:'1px solid rgba(150,50,255,0.22)', borderRadius:18, overflow:'hidden', boxShadow:'0 0 0 1px rgba(255,255,255,0.02), 0 8px 50px rgba(0,0,0,0.4)', position:'relative' }}>
           <div style={{ height:1, background:'linear-gradient(90deg,transparent,#ff00b4,#9632ff,#6400ff,transparent)', boxShadow:'0 0 12px rgba(150,50,255,0.5)' }}/>
-          <TranslatorPanel srcText={srcText} setSrcText={setSrcText} outText={outText} typedText={typedText} lang={lang} onAll={doAll} onAnalyze={()=>doAnalyze(true)} onTranslate={doTranslate} onVoice={toggleVoice} listening={listening} onSpeak={speak} onStopSpeak={()=>{window.speechSynthesis.cancel();setSpeaking(false)}} speaking={speaking} onFile={handleFile} fileRef={fileRef} onClear={clear} onExport={exportPDF} analyzing={analyzing} translating={translating} liveMode={liveMode} darkMode={darkMode}/>
+          <TranslatorPanel srcText={srcText} setSrcText={setSrcText} outText={outText} typedText={typedText} lang={lang} onAll={doAll} onAnalyze={()=>doAnalyze(true)} onTranslate={doTranslate} onVoice={toggleVoice} listening={listening} onSpeak={speak} onStopSpeak={()=>{window.speechSynthesis.cancel();setSpeaking(false)}} speaking={speaking} onFile={handleFile} fileRef={fileRef} onClear={clear} onExport={exportPDF} analyzing={analyzing} translating={translating} darkMode={darkMode}/>
           <PhaseBar phase={phase} analyzing={analyzing} />
           {result && (
             <div style={{ padding:'8px 14px', borderTop:'1px solid rgba(150,50,255,0.08)', display:'flex', gap:8 }}>
@@ -290,8 +281,7 @@ export default function App() {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, marginBottom:16 }}>
                 {['#ff00b4','#9632ff','#6400ff'].map((c,i)=><div key={i} style={{ width:12,height:12,borderRadius:'50%',background:c,boxShadow:`0 0 14px ${c}` }}/>)}
               </div>
-              <p style={{ fontSize:14, fontWeight:600, color: darkMode?'rgba(255,224,255,0.6)':'rgba(80,0,140,0.7)', marginBottom:6 }}>{liveMode?'⚡ Modo LIVE activo — escribe para analizar':'Ingresa texto para comenzar el análisis'}</p>
-              <p style={{ fontSize:11, color:'rgba(150,50,255,0.5)', fontFamily:'var(--mono)', letterSpacing:1 }}>LÉXICO · SINTÁCTICO · SEMÁNTICO · ÁRBOL BNF · TRADUCCIÓN · VOZ</p>
+<p style={{ fontSize:14, fontWeight:600, color: darkMode?'rgba(255,224,255,0.6)':'rgba(80,0,140,0.7)', marginBottom:6 }}>Ingresa texto para comenzar el análisis</p>              <p style={{ fontSize:11, color:'rgba(150,50,255,0.5)', fontFamily:'var(--mono)', letterSpacing:1 }}>LÉXICO · SINTÁCTICO · SEMÁNTICO · ÁRBOL BNF · TRADUCCIÓN · VOZ</p>
             </div>
           )}
           {result && <ResultTabs result={result} tab={tab} setTab={setTab} lang={lang} srcText={srcText} outText={outText}/>}

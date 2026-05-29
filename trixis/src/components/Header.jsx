@@ -1,4 +1,4 @@
-export default function Header({ lang, onFlip, liveMode, onToggleLive, onHistory, onLanding, darkMode, onToggleDark }) {
+export default function Header({ lang, onFlip, onHistory, onLanding, darkMode, onToggleDark }) {
   const s = (c, g) => ({ color:c, boxShadow:`0 0 8px ${g}` })
   return (
     <header style={{ background:'rgba(7,0,20,0.96)', borderBottom:'1px solid rgba(150,50,255,0.18)', position:'relative', overflow:'hidden' }}>
