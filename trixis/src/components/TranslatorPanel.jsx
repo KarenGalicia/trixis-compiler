@@ -128,7 +128,6 @@ export default function TranslatorPanel({
           {[
             { label: listening?'Detener':'🎤 Voz', onClick: onVoice, active: listening },
             { label:'📄 .txt',  onClick: () => fileRef.current?.click() },
-            { label:'📥 PDF',   onClick: onExport },
             { label:'🗑 Limpiar', onClick: onClear },
           ].map(({label, onClick, active}) => (
             <button key={label} onClick={onClick} style={{ display:'flex', alignItems:'center', gap:4, padding:'7px 11px', background: active?'rgba(255,0,180,0.12)':'rgba(0,0,10,0.4)', color: active?'#ff00b4':'rgba(96,48,112,1)', fontSize:11, borderRadius:9, border:`1px solid ${active?'rgba(255,0,180,0.35)':'rgba(255,255,255,0.08)'}`, cursor:'pointer', boxShadow: active?'0 0 10px rgba(255,0,180,0.2)':'none' }}>
