@@ -243,7 +243,17 @@ export default function App() {
   }, [result, srcText, outText, lang])
 
   const flip = () => { setSrcText(outText); setOutText(''); setLang(l=>l==='en'?'es':'en'); setResult(null); setPhase(0) }
-  const handleFile = e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>setSrcText(ev.target.result); r.readAsText(f); e.target.value='' }
+  const handleFile = e => { 
+  const f=e.target.files[0]; 
+  if(!f) return; 
+  const r=new FileReader(); 
+  r.onload=ev=>{ 
+    setSrcText(ev.target.result); 
+    setTimeout(() => doAnalyze(true), 100)
+  }; 
+  r.readAsText(f); 
+  e.target.value='' 
+}
   const toggleVoice = () => {
     if (listening) { recRef.current?.stop(); setListening(false); return }
     const SR = window.SpeechRecognition||window.webkitSpeechRecognition
