@@ -1217,4 +1217,4 @@ export const PUNCT_MAP = {
   '¿':{cat:"Int. apertura",type:"PUNCT",token:"PUNT_INT_A"},
   '¡':{cat:"Exc. apertura",type:"PUNCT",token:"PUNT_EXCL_A"},
 }
-// Esta línea no se agrega al archivo real, solo verificando
+// Esta línea no se agrega al archivo real, solo verificandogit add .
